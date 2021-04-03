@@ -1,0 +1,29 @@
+{
+  "name": "SelfBotColongan",
+  "version": "0.0.1",
+  "description": "Ga ada",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "aqulzz | dngda",
+  "dependencies": {
+    "@adiwajshing/baileys": "^3.4.1",
+    "axios": "^0.21.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "moment-timezone": "^0.5.33",
+    "request": "^2.88.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dngda/SelfBotColongan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dngda/SelfBotColongan/issues"
+  },
+  "homepage": "https://github.com/dngda/SelfBotColongan#readme"
+}
