@@ -32,7 +32,7 @@ conn.connect()
 const client = conn.client
 
 fake = 'Self Bot Colongan'
-fakeimage = fs.readFileSync(`./media/wa.jpg`)
+fakeimage = fs.readFileSync(`./media/wa.jpeg`)
 prefix = '<>'
 public = false
 
