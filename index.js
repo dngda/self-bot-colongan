@@ -54,7 +54,7 @@ client.on('message-new', async(msg) => {
 		const args = body.trim().split(/ +/).slice(1)
 		const isCmd = body.startsWith(prefix)
 		const arg = chats.slice(command.length + 2, chats.length)
-		const ucapan = await axios.get('https://xinzbot-api.herokuapp.com/api/ucapan?apikey=clientBot&timeZone=Asia/Jakarta')
+		const ucapan = await axios.get('https://xinzbot-api.herokuapp.com/api/ucapan?apikey=XinzBot&timeZone=Asia/Jakarta')
 
         const botNumber = client.user.jid
 		const isGroup = from.endsWith('@g.us')
