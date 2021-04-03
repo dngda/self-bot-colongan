@@ -5,4 +5,4 @@ node_modules/
 .npm
 
 # sessions file
-aqulzz.json
+session.json
