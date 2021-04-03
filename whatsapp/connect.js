@@ -7,6 +7,7 @@ const client = new WAConnection()
 
 exports.client = client
 exports.connect = async() => {
+	client.logger.level = 'info'
     let session = './session.json'
 	client.on('qr', qr => {
         qrcode.generate(qr, { small: true })

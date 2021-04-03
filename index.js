@@ -1,6 +1,7 @@
 const
 	{
 		WA_MESSAGE_STUB_TYPES,
+		WA_DEFAULT_EPHEMERAL,
 		GroupSettingChange,
 		WALocationMessage,
 		MessageOptions,
@@ -33,7 +34,7 @@ const client = conn.client
 
 fake = 'Self Bot Colongan'
 fakeimage = fs.readFileSync(`./media/wa.jpeg`)
-prefix = '<>'
+prefix = '?'
 public = false
 
 client.on('message-new', async(msg) => {
