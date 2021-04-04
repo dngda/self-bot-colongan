@@ -111,7 +111,6 @@ client.on('message-new', async(msg) => {
 - ${prefix}setname
 - ${prefix}setbio
 
-- ${prefix}fdeface
 - ${prefix}fakethumbnail
 - ${prefix}setthumb
 - ${prefix}getpic
@@ -304,12 +303,12 @@ Dah itu doang.`
 			case 'runtime':
 				run = process.uptime()
 				let text = wa.runtime(run)
-				wa.sendFakeStatus(from, text, `Runtime bro`)
+				wa.sendFakeStatus(from, text, `Runtime`)
 				break
 			case 'speed': case 'ping':
 				let timestamp = speed();
 				let latensi = speed() - timestamp
-				wa.sendFakeStatus(from, `Speed: ${latensi.toFixed(4)}second`, fake)
+				wa.sendFakeStatus(from, `Speed: ${latensi.toFixed(4)} seconds`, fake)
 				break
 			case 'mystat': case 'mystatus':
 				let i = []
@@ -379,18 +378,6 @@ Dah itu doang.`
 				wa.setBio(arg)
 				.then((res) => wa.sendFakeStatus(from, JSON.stringify(res), fake))
 				.catch((err) => wa.sendFakeStatus(from, JSON.stringify(err), fake))
-				break
-			case 'fdeface': case 'hack':
-				if (!arg) return wa.reply(from, `Penggunaaan ${prefix}fdeface url|title|desc|bawahnya`, msg)
-				argz = arg.split("|")
-				if (!argz) return wa.reply(from, `Penggunaaan ${prefix}fdeface url|title|desc|bawahnya`, msg)
-				if ((isMedia && !msg.message.videoMessage || isQuotedImage)) {
-					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(msg).replace('quotedM','m')).message.extendedTextMessage.contextInfo : msg
-					let media = await client.downloadMediaMessage(encmedia)
-					wa.sendFakeThumb(from, argz[0], argz[1], argz[2], argz[3], media)
-				} else {
-					wa.sendFakeThumb(from, argz[0], argz[1], argz[2], argz[3])
-				}
 				break
 			case 'fakethumbnail': case 'fthumbnail': case 'fakethumb':
 				if ((isMedia && !msg.message.videoMessage || isQuotedImage)) {

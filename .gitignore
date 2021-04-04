@@ -6,3 +6,5 @@ node_modules/
 
 # sessions file
 session.json
+
+sticker/*.webp
