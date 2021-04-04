@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Ga ada",
   "main": "index.js",
+  "license": "ISC",
   "directories": {
     "lib": "lib"
   },
@@ -14,6 +15,7 @@
   "dependencies": {
     "@adiwajshing/baileys": "^3.4.1",
     "axios": "^0.21.1",
+    "figlet": "^1.5.0",
     "fluent-ffmpeg": "^2.1.2",
     "moment-timezone": "^0.5.33",
     "request": "^2.88.2"
