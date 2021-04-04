@@ -19,9 +19,7 @@ exports.connect = async() => {
 		console.log(color('Connecting...'))
 	})
 	client.on('open', () => {
-    console.log(color(figlet.textSync('----------------', { horizontalLayout: 'default' })))
-    console.log(color(figlet.textSync('SelfBotColongan', { font: 'Ghost', horizontalLayout: 'default' })))
-    console.log(color(figlet.textSync('----------------', { horizontalLayout: 'default' })))
+    console.log(color(figlet.textSync('  Self Bot Colongan', { width: 100, whitespaceBreak: true })))
     console.log(color('[DEV]'), color('Danang', 'yellow'))
     console.log(color('[~>>]'), color('BOT Started!', 'green'))
 	})
