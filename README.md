@@ -37,7 +37,7 @@
 > git clone https://github.com/dngda/self-bot-colongan.git
 > cd self-bot-colongan
 > npm install
-> node xinz
+> node index
 ```
 ## For Termux
 ```bash
@@ -57,21 +57,8 @@
 - Change menu [disini](https://github.com/dngda/self-bot-colongan/blob/master/index.js#95)
 - Change prefix [disini](https://github.com/dngda/self-bot-colongan/blob/master/index.js#35)
 - Change faketeks [disini](https://github.com/dngda/self-bot-colongan/blob/master/index.js#33)
-- Change gambar [disini](https://github.com/dngda/self-bot-colongan/blob/master/media/wa.jpg) di replace gambar nya dan jangan diubah namanya
-- Bisa juga ganti biar jadi forwarded message
-```js
-aqul.sendFakeStatus(from, teks, fake)
-// bisa diubah menjadi
-aqul.FakeStatusForwarded(from, teks, fake)
+- Change gambar [disini](https://github.com/dngda/self-bot-colongan/blob/master/media/wa.jpeg) di replace gambar nya dan jangan diubah namanya
 
-aqul.sendFakeStatusWithImg(from, image, caption, faketeks)
-// bisa diubah menjadi
-aqul.FakeStatusImgForwarded(from, image, caption, faketeks)
-
-aqul.sendFakeToko(from, teks, fake)
-// bisa diubah menjadi
-aqul.FakeTokoForwarded(from, teks, fake)
-```
 
 ## Installing the FFmpeg
 * Unduh salah satu versi FFmpeg yang tersedia dengan mengklik [di sini](https://www.gyan.dev/ffmpeg/builds/).
