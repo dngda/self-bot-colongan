@@ -287,6 +287,7 @@ Dah itu doang.`
 				})
 				break
 			case 'colong':
+			case 'c':
 				if (!isQuotedSticker) return wa.reply(from, `Reply sticker dengan caption *${prefix}colong*`, msg)
 				const encmediia = JSON.parse(JSON.stringify(msg).replace('quotedM','m')).message.extendedTextMessage.contextInfo
 				const meidia = await client.downloadAndSaveMediaMessage(encmediia, `./sticker/${sender}`)
