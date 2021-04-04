@@ -14,12 +14,6 @@ exports.connect = async() => {
         qrcode.generate(qr, { small: true })
         console.log(`Please Scan QR to authenticate!`)
     })
-    /*
-	client.on('credentials-updated', () => {
-		fs.writeFileSync(session, JSON.stringify(client.base64EncodedAuthInfo(), null, '\t'))
-		console.log(color('Wait....'))
-	})
-    */
 	fs.existsSync(session) && client.loadAuthInfo(session)
 	client.on('connecting', () => {
 		console.log(color('Connecting...'))
