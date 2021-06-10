@@ -1,5 +1,5 @@
 {
-  "name": "SelfBotColongan",
+  "name": "self-bot-colongan",
   "version": "0.0.1",
   "description": "Ga ada",
   "main": "index.js",
@@ -13,7 +13,7 @@
   },
   "author": "aqulzz | dngda",
   "dependencies": {
-    "@adiwajshing/baileys": "^3.4.1",
+    "@adiwajshing/baileys": "github:adiwajshing/baileys",
     "axios": "^0.21.1",
     "figlet": "^1.5.0",
     "fluent-ffmpeg": "^2.1.2",
