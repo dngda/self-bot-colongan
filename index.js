@@ -37,13 +37,13 @@ import {
 	reply
 } from './whatsapp/message.js'
 import moment from "moment-timezone"
-const { tz } = moment
+moment.tz.setDefault('Asia/Jakarta').locale('id')
 import { color } from './lib/color.js'
+import simple from './lib/simple.cjs'
 import { exec } from 'child_process'
 import speed from 'performance-now'
 import ffmpeg from 'fluent-ffmpeg'
 import Exif from './lib/exif.js'
-import simple from './lib/simple.cjs'
 import axios from 'axios'
 const exif = new Exif()
 
@@ -68,29 +68,29 @@ client.on('chat-update', async (chatUpdates) => {
 		global.prefix
 		const content = JSON.stringify(m.message)
 		const from = m.key.remoteJid
-		const type = Object.keys(m.message)[0]
-		const { text, extendedText, contact, location, liveLocation, image, video, sticker, document, audio, product } = MessageType
-		let body = m.text?.startsWith(prefix) ? m.text : ''
-		let chats = m.text
+		const type = m.mtype
+		// const { text, extendedText, contact, location, liveLocation, image, video, sticker, document, audio, product } = MessageType
+		const body = (type === 'extendedTextMessage' || type === 'conversation') && m.text.startsWith(prefix) ? m.text : ''
+		const chats = (type === 'extendedTextMessage' || type === 'conversation') ? m.text : ''
 		const command = body.replace(prefix, '').trim().split(/ +/).shift().toLowerCase()
-		const args = body.trim().split(/ +/).slice(1)
+		const arg = body.replace(prefix + command, '').trim()
+		const args = arg.split(/\s/)
 		const isCmd = body.startsWith(prefix)
-		const arg = chats.replace(prefix + command + ' ', '')
 		const botNumber = client.user.jid
 		const isGroup = m.isGroup
-		const sender = m.key.fromMe ? client.user.jid : isGroup ? m.participant : m.key.remoteJid
-		const totalchat = client.chats.all()
+		const sender = m.sender
 		const groupMetadata = isGroup ? await client.groupMetadata(from) : ''
 		const groupName = isGroup ? groupMetadata.subject : ''
-		const groupId = isGroup ? groupMetadata.jid : ''
-		const groupMembers = isGroup ? groupMetadata.participants : ''
-		const groupDesc = isGroup ? groupMetadata.desc : ''
-		const groupAdmins = isGroup ? getGroupAdmins(groupMembers) : ''
-		const groupOwner = isGroup ? groupMetadata.owner : ''
 		const itsMe = sender === botNumber ? true : false
-		const isUrl = (url) => {
-			return url.match(new RegExp(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%.+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%+.~#?&/=]*)/, 'gi'))
-		}
+		// const totalchat = client.chats.all()
+		// const groupId = isGroup ? groupMetadata.jid : ''
+		// const groupMembers = isGroup ? groupMetadata.participants : ''
+		// const groupDesc = isGroup ? groupMetadata.desc : ''
+		// const groupAdmins = isGroup ? getGroupAdmins(groupMembers) : ''
+		// const groupOwner = isGroup ? groupMetadata.owner : ''
+		// const isUrl = (url) => {
+		// 	return url.match(new RegExp(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%.+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%+.~#?&/=]*)/, 'gi'))
+		// }
 
 		const isMedia = (type === 'imageMessage' || type === 'videoMessage')
 		const isQuotedImage = type === 'extendedTextMessage' && content.includes('imageMessage')
@@ -319,10 +319,11 @@ client.on('chat-update', async (chatUpdates) => {
 					unlinkSync(meidia)
 				})
 				break
-			case 'hidetag':
+			case 'hidetag': {
 				if (!arg) return reply(from, `Penggunaan ${prefix}hidetag teks`, m)
 				hideTag(from, arg)
 				break
+			}
 			case 'runtime':
 				let run = process.uptime()
 				let text = runtime(run)
@@ -381,8 +382,7 @@ client.on('chat-update', async (chatUpdates) => {
 				break
 			}
 			case 'setthumb': {
-				let boij = JSON.parse(JSON.stringify(m).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
-				let delb = await client.downloadMediaMessage(boij)
+				let delb = await m.quoted.download()
 				writeFileSync(`./media/wa.jpeg`, delb)
 				sendFakeStatus(from, `Sukses`, fake)
 				break
