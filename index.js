@@ -1,68 +1,90 @@
-const {
+import baileys, {
 	WA_MESSAGE_STUB_TYPES,
 	WA_DEFAULT_EPHEMERAL,
 	GroupSettingChange,
-	WALocationMessage,
-	MessageOptions,
 	ReconnectMode,
 	WAConnection,
-	mentionedJid,
 	MessageType,
-	processTime,
 	ProxyAgent,
 	waChatKey,
 	Mimetype,
 	Presence
-} = require("@adiwajshing/baileys")
+} from '@adiwajshing/baileys'
 
-const fs = require("fs")
-const mess = JSON.parse(fs.readFileSync('./whatsapp/mess.json'))
-const conn = require('./whatsapp/connect')
-const wa = require('./whatsapp/message.js')
-const moment = require("moment-timezone")
-const { color } = require('./lib/color')
-const { exec } = require('child_process')
-const speed = require('performance-now')
-const ffmpeg = require('fluent-ffmpeg')
-const Exif = require('./lib/exif')
-const axios = require('axios')
+const { processTime, mentionedJid, MessageOptions, WALocationMessage } = baileys
+
+import fs from "fs"
+const { readFileSync, unlinkSync, writeFileSync } = fs
+
+const mess = JSON.parse(readFileSync('./whatsapp/mess.json'))
+import { connect, client } from './whatsapp/connect.js'
+import {
+	sendFakeStatusWithImg,
+	getGroupAdmins,
+	sendFakeStatus,
+	hideTagSticker,
+	hideTagKontak,
+	sendSticker,
+	sendFakeImg,
+	sendKontak,
+	hideTagImg,
+	getBuffer,
+	sendText,
+	hideTag,
+	runtime,
+	setName,
+	setBio,
+	reply
+} from './whatsapp/message.js'
+import moment from "moment-timezone"
+const { tz } = moment
+import { color } from './lib/color.js'
+import { exec } from 'child_process'
+import speed from 'performance-now'
+import ffmpeg from 'fluent-ffmpeg'
+import Exif from './lib/exif.js'
+import axios from 'axios'
 const exif = new Exif()
 
-conn.connect()
-const client = conn.client
+connect()
 
-fake = 'Self Bot Colongan'
-fakeimage = fs.readFileSync(`./media/wa.jpeg`)
-prefix = '?'
-public = false
+let fake = 'Self Bot Colongan'
+let fakeimage = readFileSync(`./media/wa.jpeg`)
+let prefix = '='
+let publicMode = false
 
-client.on('message-new', async (msg) => {
+client.on('chat-update', async (chatUpdate) => {
+	// received a new message
+	if (chatUpdate.messages && chatUpdate.count) {
+		const message = chatUpdate.messages.all()[0]
+		console.log(message)
+	} else console.log(chatUpdate) // see updates (can be archived, pinned etc.)
+
 	try {
-		if (!msg.message) return
-		if (msg.key && msg.key.remoteJid == 'status@broadcast') return
+		if (!chatUpdate.message) return
+		if (chatUpdate.key && chatUpdate.key.remoteJid == 'status@broadcast') return
 
 		global.prefix
-		const content = JSON.stringify(msg.message)
-		const from = msg.key.remoteJid
-		const type = Object.keys(msg.message)[0]
+		const content = JSON.stringify(chatUpdate.message)
+		const from = chatUpdate.key.remoteJid
+		const type = Object.keys(chatUpdate.message)[0]
 		const { text, extendedText, contact, location, liveLocation, image, video, sticker, document, audio, product } = MessageType
-		const time = moment.tz('Asia/Jakarta').format('DD/MM HH:mm:ss')
-		body = (type === 'conversation' && msg.message.conversation.startsWith(prefix)) ? msg.message.conversation : (type == 'imageMessage') && msg.message.imageMessage.caption.startsWith(prefix) ? msg.message.imageMessage.caption : (type == 'videoMessage') && msg.message.videoMessage.caption.startsWith(prefix) ? msg.message.videoMessage.caption : (type == 'extendedTextMessage') && msg.message.extendedTextMessage.text.startsWith(prefix) ? msg.message.extendedTextMessage.text : ''
-		chats = (type === 'conversation') ? msg.message.conversation : (type === 'extendedTextMessage') ? msg.message.extendedTextMessage.text : ''
+		body = (type === 'conversation' && chatUpdate.message.conversation.startsWith(prefix)) ? chatUpdate.message.conversation : (type == 'imageMessage') && chatUpdate.message.imageMessage.caption.startsWith(prefix) ? chatUpdate.message.imageMessage.caption : (type == 'videoMessage') && chatUpdate.message.videoMessage.caption.startsWith(prefix) ? chatUpdate.message.videoMessage.caption : (type == 'extendedTextMessage') && chatUpdate.message.extendedTextMessage.text.startsWith(prefix) ? chatUpdate.message.extendedTextMessage.text : ''
+		chats = (type === 'conversation') ? chatUpdate.message.conversation : (type === 'extendedTextMessage') ? chatUpdate.message.extendedTextMessage.text : ''
 		const command = body.replace(prefix, '').trim().split(/ +/).shift().toLowerCase()
 		const args = body.trim().split(/ +/).slice(1)
 		const isCmd = body.startsWith(prefix)
 		const arg = chats.replace(prefix + command + ' ', '')
 		const botNumber = client.user.jid
 		const isGroup = from.endsWith('@g.us')
-		const sender = msg.key.fromMe ? client.user.jid : isGroup ? msg.participant : msg.key.remoteJid
+		const sender = chatUpdate.key.fromMe ? client.user.jid : isGroup ? chatUpdate.participant : chatUpdate.key.remoteJid
 		const totalchat = client.chats.all()
 		const groupMetadata = isGroup ? await client.groupMetadata(from) : ''
 		const groupName = isGroup ? groupMetadata.subject : ''
 		const groupId = isGroup ? groupMetadata.jid : ''
 		const groupMembers = isGroup ? groupMetadata.participants : ''
 		const groupDesc = isGroup ? groupMetadata.desc : ''
-		const groupAdmins = isGroup ? wa.getGroupAdmins(groupMembers) : ''
+		const groupAdmins = isGroup ? getGroupAdmins(groupMembers) : ''
 		const groupOwner = isGroup ? groupMetadata.owner : ''
 		const itsMe = sender === botNumber ? true : false
 		const isUrl = (url) => {
@@ -74,24 +96,26 @@ client.on('message-new', async (msg) => {
 		const isQuotedVideo = type === 'extendedTextMessage' && content.includes('videoMessage')
 		const isQuotedAudio = type === 'extendedTextMessage' && content.includes('audioMessage')
 		const isQuotedSticker = type === 'extendedTextMessage' && content.includes('stickerMessage')
+
 		if (itsMe) {
 			if (chats.toLowerCase() === `self`) {
-				public = false
-				wa.sendFakeStatus(from, `Sukses`, `Status: SELF (Prefix ${prefix})`)
+				publicMode = false
+				sendFakeStatus(from, `Sukses`, `Status: SELF (Prefix ${prefix})`)
 			}
 			else if (chats.toLowerCase() === `public`) {
-				public = true
-				wa.sendFakeStatus(from, `Sukses`, `Status: PUBLIC (Prefix ${prefix})`)
+				publicMode = true
+				sendFakeStatus(from, `Sukses`, `Status: PUBLIC (Prefix ${prefix})`)
 			}
 			else if (chats.toLowerCase() === 'status') {
-				wa.sendFakeStatus(from, `Online`, `Status: ${public ? 'PUBLIC' : 'SELF'} (Prefix ${prefix})`)
+				sendFakeStatus(from, `Online`, `Status: ${publicMode ? 'PUBLIC' : 'SELF'} (Prefix ${prefix})`)
 			}
 		}
-		if (!public) {
-			if (!msg.key.fromMe) return
+
+		if (!publicMode) {
+			if (!chatUpdate.key.fromMe) return
 		}
-		if (isCmd && !isGroup) { console.log(color('[CMD]'), color(moment(msg.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`${command} [${args.length}]`)) }
-		if (isCmd && isGroup) { console.log(color('[CMD]'), color(moment(msg.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`${command} [${args.length}]`), 'from', color(client.user.name), 'in', color(groupName)) }
+		if (isCmd && !isGroup) { console.log(color('[CMD]'), color(moment(chatUpdate.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`${command} [${args.length}]`)) }
+		if (isCmd && isGroup) { console.log(color('[CMD]'), color(moment(chatUpdate.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`${command} [${args.length}]`), 'from', color(client.user.name), 'in', color(groupName)) }
 		switch (command) {
 			case 'menu': case 'help':
 				textnya = `Hallo semua*
@@ -125,22 +149,22 @@ client.on('message-new', async (msg) => {
 - >> (eval)
 - = (term)
 `
-				wa.sendFakeStatusWithImg(from, fakeimage, textnya, fake)
+				sendFakeStatusWithImg(from, fakeimage, textnya, fake)
 				break
 			case 'test':
-				wa.sendText(from, 'Oke mantap')
+				sendText(from, 'Oke mantap')
 				break
 			case 'exif':
-				if (args.length < 1) return wa.reply(from, `Penggunaan ${prefix}exif nama|author`, msg)
-				if (!arg.split('|')) return wa.reply(from, `Penggunaan ${prefix}exif nama|author`, msg)
+				if (args.length < 1) return reply(from, `Penggunaan ${prefix}exif nama|author`, chatUpdate)
+				if (!arg.split('|')) return reply(from, `Penggunaan ${prefix}exif nama|author`, chatUpdate)
 				exif.create(arg.split('|')[0], arg.split('|')[1])
-				wa.reply(from, 'sukses', msg)
+				reply(from, 'sukses', chatUpdate)
 				break
 			case 'sticker':
 			case 'stiker':
 			case 's':
-				if (isMedia && !msg.message.videoMessage || isQuotedImage) {
-					const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				if (isMedia && !chatUpdate.message.videoMessage || isQuotedImage) {
+					const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
 					ffmpeg(`${media}`)
 						.input(media)
@@ -149,26 +173,26 @@ client.on('message-new', async (msg) => {
 						})
 						.on('error', function (err) {
 							console.log(`Error : ${err}`)
-							fs.unlinkSync(media)
-							wa.reply(from, mess.error.api, msg)
+							unlinkSync(media)
+							reply(from, mess.error.api, chatUpdate)
 						})
 						.on('end', function () {
 							console.log('Finish')
 							exec(`webpmux -set exif ./sticker/data.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
 								if (error)
-									return wa.reply(from, mess.error.api, msg)
-								wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-								fs.unlinkSync(media)
-								fs.unlinkSync(`./sticker/${sender}.webp`)
+									return reply(from, mess.error.api, chatUpdate)
+								sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+								unlinkSync(media)
+								unlinkSync(`./sticker/${sender}.webp`)
 							})
 						})
 						.addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
 						.toFormat('webp')
 						.save(`./sticker/${sender}.webp`)
-				} else if ((isMedia && msg.message.videoMessage.fileLength < 10000000 || isQuotedVideo && msg.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.fileLength < 10000000)) {
-					const encmedia = isQuotedVideo ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				} else if ((isMedia && chatUpdate.message.videoMessage.fileLength < 10000000 || isQuotedVideo && chatUpdate.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.fileLength < 10000000)) {
+					const encmedia = isQuotedVideo ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
-					wa.reply(from, mess.wait, msg)
+					reply(from, mess.wait, chatUpdate)
 					ffmpeg(`${media}`)
 						.inputFormat(media.split('.')[4])
 						.on('start', function (cmd) {
@@ -176,32 +200,32 @@ client.on('message-new', async (msg) => {
 						})
 						.on('error', function (err) {
 							console.log(`Error : ${err}`)
-							fs.unlinkSync(media)
+							unlinkSync(media)
 							tipe = media.endsWith('.mp4') ? 'video' : 'gif'
-							wa.reply(from, mess.error.api, msg)
+							reply(from, mess.error.api, chatUpdate)
 						})
 						.on('end', function () {
 							console.log('Finish')
 							exec(`webpmux -set exif ./sticker/data.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
 								if (error)
-									return wa.reply(from, mess.error.api, msg)
-								wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-								fs.unlinkSync(media)
-								fs.unlinkSync(`./sticker/${sender}.webp`)
+									return reply(from, mess.error.api, chatUpdate)
+								sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+								unlinkSync(media)
+								unlinkSync(`./sticker/${sender}.webp`)
 							})
 						})
 						.addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
 						.toFormat('webp')
 						.save(`./sticker/${sender}.webp`)
 				} else {
-					wa.reply(from, `Kirim gambar/video dengan caption ${prefix}sticker atau tag gambar/video yang sudah dikirim\nNote : Durasi video maximal 10 detik`, msg)
+					reply(from, `Kirim gambar/video dengan caption ${prefix}sticker atau tag gambar/video yang sudah dikirim\nNote : Durasi video maximal 10 detik`, chatUpdate)
 				}
 				break
 			case 'swm':
 			case 'stickerwm':
-				if (isMedia && !msg.message.videoMessage || isQuotedImage) {
-					if (!arg.includes('|')) return wa.reply(from, `Kirim gambar atau reply gambar dengan caption *${prefix}stickerwm nama|author*`, msg)
-					const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				if (isMedia && !chatUpdate.message.videoMessage || isQuotedImage) {
+					if (!arg.includes('|')) return reply(from, `Kirim gambar atau reply gambar dengan caption *${prefix}stickerwm nama|author*`, chatUpdate)
+					const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
 					const packname1 = arg.split('|')[0]
 					const author1 = arg.split('|')[1]
@@ -213,31 +237,31 @@ client.on('message-new', async (msg) => {
 						})
 						.on('error', function (err) {
 							console.log(`Error : ${err}`)
-							fs.unlinkSync(media)
-							wa.reply(from, mess.error.api, msg)
+							unlinkSync(media)
+							reply(from, mess.error.api, chatUpdate)
 						})
 						.on('end', function () {
 							console.log('Finish')
 							exec(`webpmux -set exif ./sticker/stickwm_${sender}.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
 								if (error)
-									return wa.reply(from, mess.error.api, msg)
-								wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-								fs.unlinkSync(media)
-								fs.unlinkSync(`./sticker/${sender}.webp`)
-								fs.unlinkSync(`./sticker/stickwm_${sender}.exif`)
+									return reply(from, mess.error.api, chatUpdate)
+								sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+								unlinkSync(media)
+								unlinkSync(`./sticker/${sender}.webp`)
+								unlinkSync(`./sticker/stickwm_${sender}.exif`)
 							})
 						})
 						.addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
 						.toFormat('webp')
 						.save(`./sticker/${sender}.webp`)
-				} else if ((isMedia && msg.message.videoMessage.fileLength < 10000000 || isQuotedVideo && msg.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.fileLength < 10000000)) {
-					if (!arg.includes('|')) return wa.reply(from, `Kirim gambar atau reply gambar dengan caption *${prefix}stickerwm nama|author*`, msg)
-					const encmedia = isQuotedVideo ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				} else if ((isMedia && chatUpdate.message.videoMessage.fileLength < 10000000 || isQuotedVideo && chatUpdate.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage.fileLength < 10000000)) {
+					if (!arg.includes('|')) return reply(from, `Kirim gambar atau reply gambar dengan caption *${prefix}stickerwm nama|author*`, chatUpdate)
+					const encmedia = isQuotedVideo ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
 					const packname1 = arg.split('|')[0]
 					const author1 = arg.split('|')[1]
 					exif.create(packname1, author1, `stickwm_${sender}`)
-					wa.reply(from, mess.wait, msg)
+					reply(from, mess.wait, chatUpdate)
 					ffmpeg(`${media}`)
 						.inputFormat(media.split('.')[4])
 						.on('start', function (cmd) {
@@ -245,19 +269,19 @@ client.on('message-new', async (msg) => {
 						})
 						.on('error', function (err) {
 							console.log(`Error : ${err}`)
-							fs.unlinkSync(media)
+							unlinkSync(media)
 							tipe = media.endsWith('.mp4') ? 'video' : 'gif'
-							wa.reply(from, mess.error.api, msg)
+							reply(from, mess.error.api, chatUpdate)
 						})
 						.on('end', function () {
 							console.log('Finish')
 							exec(`webpmux -set exif ./sticker/stickwm_${sender}.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
 								if (error)
-									return wa.reply(from, mess.error.api, msg)
-								wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-								fs.unlinkSync(media)
-								fs.unlinkSync(`./sticker/${sender}.webp`)
-								fs.unlinkSync(`./sticker/stickwm_${sender}.exif`)
+									return reply(from, mess.error.api, chatUpdate)
+								sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+								unlinkSync(media)
+								unlinkSync(`./sticker/${sender}.webp`)
+								unlinkSync(`./sticker/stickwm_${sender}.exif`)
 							})
 						})
 						.addOutputOptions([`-vcodec`, `libwebp`, `-vf`, `scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse`])
@@ -268,144 +292,144 @@ client.on('message-new', async (msg) => {
 				}
 				break
 			case 'takestick':
-				if (!isQuotedSticker) return wa.reply(from, `Reply sticker dengan caption *${prefix}takestick nama|author*`, msg)
+				if (!isQuotedSticker) return reply(from, `Reply sticker dengan caption *${prefix}takestick nama|author*`, chatUpdate)
 				const pembawm = body.slice(11)
-				if (!pembawm.includes('|')) return wa.reply(from, `Reply sticker dengan caption *${prefix}takestick nama|author*`, msg)
-				const encmedia = JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
+				if (!pembawm.includes('|')) return reply(from, `Reply sticker dengan caption *${prefix}takestick nama|author*`, chatUpdate)
+				const encmedia = JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
 				const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
 				const packname = pembawm.split('|')[0]
 				const author = pembawm.split('|')[1]
 				exif.create(packname, author, `takestick_${sender}`)
 				exec(`webpmux -set exif ./sticker/takestick_${sender}.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
-					if (error) return wa.reply(from, mess.error.api, msg)
-					wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-					fs.unlinkSync(media)
-					fs.unlinkSync(`./sticker/takestick_${sender}.exif`)
+					if (error) return reply(from, mess.error.api, chatUpdate)
+					sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+					unlinkSync(media)
+					unlinkSync(`./sticker/takestick_${sender}.exif`)
 				})
 				break
 			case 'colong':
 			case 'c':
-				if (!isQuotedSticker) return wa.reply(from, `Reply sticker dengan caption *${prefix}colong*`, msg)
-				const encmediia = JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
+				if (!isQuotedSticker) return reply(from, `Reply sticker dengan caption *${prefix}colong*`, chatUpdate)
+				const encmediia = JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
 				const meidia = await client.downloadAndSaveMediaMessage(encmediia, `./sticker/${sender}`)
 				exec(`webpmux -set exif ./sticker/data.exif ./sticker/${sender}.webp -o ./sticker/${sender}.webp`, async (error) => {
-					if (error) return wa.reply(from, mess.error.api, msg)
-					wa.sendSticker(from, fs.readFileSync(`./sticker/${sender}.webp`), msg)
-					fs.unlinkSync(meidia)
+					if (error) return reply(from, mess.error.api, chatUpdate)
+					sendSticker(from, readFileSync(`./sticker/${sender}.webp`), chatUpdate)
+					unlinkSync(meidia)
 				})
 				break
 			case 'hidetag':
-				if (!arg) return wa.reply(from, `Penggunaan ${prefix}hidetag teks`, msg)
-				wa.hideTag(from, arg)
+				if (!arg) return reply(from, `Penggunaan ${prefix}hidetag teks`, chatUpdate)
+				hideTag(from, arg)
 				break
 			case 'runtime':
 				run = process.uptime()
-				let text = wa.runtime(run)
-				wa.sendFakeStatus(from, text, `Runtime`)
+				let text = runtime(run)
+				sendFakeStatus(from, text, `Runtime`)
 				break
 			case 'speed': case 'ping':
 				let timestamp = speed()
 				let latensi = speed() - timestamp
-				wa.sendFakeStatus(from, `Speed: ${latensi.toFixed(4)} seconds`, fake)
+				sendFakeStatus(from, `Speed: ${latensi.toFixed(4)} seconds`, fake)
 				break
 			case 'kontak':
 				argz = arg.split('|')
-				if (!argz) return wa.reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, msg)
-				if (msg.message.extendedTextMessage != undefined) {
-					mentioned = msg.message.extendedTextMessage.contextInfo.mentionedJid
-					wa.sendKontak(from, mentioned[0].split('@')[0], argz[1])
+				if (!argz) return reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, chatUpdate)
+				if (chatUpdate.message.extendedTextMessage != undefined) {
+					mentioned = chatUpdate.message.extendedTextMessage.contextInfo.mentionedJid
+					sendKontak(from, mentioned[0].split('@')[0], argz[1])
 				} else {
-					wa.sendKontak(from, argz[0], argz[1])
+					sendKontak(from, argz[0], argz[1])
 				}
 				break
 			case 'setreply':
-				if (!arg) return wa.reply(from, `Penggunaan ${prefix}setreply teks`, msg)
+				if (!arg) return reply(from, `Penggunaan ${prefix}setreply teks`, chatUpdate)
 				fake = arg
-				wa.sendFakeStatus(from, `Sukses`, fake)
+				sendFakeStatus(from, `Sukses`, fake)
 				break
 			case 'setprefix':
-				if (!arg) return wa.reply(from, `Penggunaan ${prefix}setprefix prefix`, msg)
+				if (!arg) return reply(from, `Penggunaan ${prefix}setprefix prefix`, chatUpdate)
 				prefix = arg
-				wa.sendFakeStatus(from, `Prefix berhasil diubah menjadi '${prefix}'`, fake)
+				sendFakeStatus(from, `Prefix berhasil diubah menjadi '${prefix}'`, fake)
 				break
 			case 'setname':
-				if (!arg) return wa.reply(from, 'Masukkan nama', msg)
-				wa.setName(arg)
-					.then((res) => wa.sendFakeStatus(from, JSON.stringify(res), fake))
-					.catch((err) => wa.sendFakeStatus(from, JSON.stringify(err), fake))
+				if (!arg) return reply(from, 'Masukkan nama', chatUpdate)
+				setName(arg)
+					.then((res) => sendFakeStatus(from, JSON.stringify(res), fake))
+					.catch((err) => sendFakeStatus(from, JSON.stringify(err), fake))
 				break
 			case 'setbio':
-				if (!arg) return wa.reply(from, 'Masukkan bio', msg)
-				wa.setBio(arg)
-					.then((res) => wa.sendFakeStatus(from, JSON.stringify(res), fake))
-					.catch((err) => wa.sendFakeStatus(from, JSON.stringify(err), fake))
+				if (!arg) return reply(from, 'Masukkan bio', chatUpdate)
+				setBio(arg)
+					.then((res) => sendFakeStatus(from, JSON.stringify(res), fake))
+					.catch((err) => sendFakeStatus(from, JSON.stringify(err), fake))
 				break
 			case 'fakethumbnail': case 'fthumbnail': case 'fakethumb':
-				if ((isMedia && !msg.message.videoMessage || isQuotedImage)) {
-					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				if ((isMedia && !chatUpdate.message.videoMessage || isQuotedImage)) {
+					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					let media = await client.downloadMediaMessage(encmedia)
-					wa.sendFakeImg(from, media, arg, fakeimage, msg)
+					sendFakeImg(from, media, arg, fakeimage, chatUpdate)
 				} else {
-					wa.reply(from, `Kirim gambar atau reply dengan caption ${prefix}fakethumb`, msg)
+					reply(from, `Kirim gambar atau reply dengan caption ${prefix}fakethumb`, chatUpdate)
 				}
 				break
 			case 'setthumb':
-				boij = JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
+				boij = JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
 				delb = await client.downloadMediaMessage(boij)
-				fs.writeFileSync(`./media/wa.jpeg`, delb)
-				wa.sendFakeStatus(from, `Sukses`, fake)
+				writeFileSync(`./media/wa.jpeg`, delb)
+				sendFakeStatus(from, `Sukses`, fake)
 				break
 			case 'getpic':
-				if (msg.message.extendedTextMessage != undefined) {
-					mentioned = msg.message.extendedTextMessage.contextInfo.mentionedJid
+				if (chatUpdate.message.extendedTextMessage != undefined) {
+					mentioned = chatUpdate.message.extendedTextMessage.contextInfo.mentionedJid
 					try {
 						pic = await client.getProfilePicture(mentioned[0])
 					} catch {
 						pic = 'https://i.ibb.co/Tq7d7TZ/age-hananta-495-photo.png'
 					}
-					thumb = await wa.getBuffer(pic)
+					thumb = await getBuffer(pic)
 					client.sendMessage(from, thumb, MessageType.image)
 				}
 				break
 			case 'imgtag':
-				if ((isMedia && !msg.message.videoMessage || isQuotedImage)) {
-					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : msg
+				if ((isMedia && !chatUpdate.message.videoMessage || isQuotedImage)) {
+					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : chatUpdate
 					let media = await client.downloadMediaMessage(encmedia)
-					wa.hideTagImg(from, media)
+					hideTagImg(from, media)
 				} else {
-					wa.reply(from, `Kirim gambar atau reply dengan caption ${prefix}imgtag caption`, msg)
+					reply(from, `Kirim gambar atau reply dengan caption ${prefix}imgtag caption`, chatUpdate)
 				}
 				break
 			case 'sticktag': case 'stickertag':
-				if (!isQuotedSticker) return wa.reply(from, `Reply sticker dengan caption *${prefix}stickertag*`, msg)
-				let encmediai = JSON.parse(JSON.stringify(msg).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
+				if (!isQuotedSticker) return reply(from, `Reply sticker dengan caption *${prefix}stickertag*`, chatUpdate)
+				let encmediai = JSON.parse(JSON.stringify(chatUpdate).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
 				let mediai = await client.downloadMediaMessage(encmediai)
-				wa.hideTagSticker(from, mediai)
+				hideTagSticker(from, mediai)
 				break
 			case 'kontaktag':
 				argz = arg.split('|')
-				if (!argz) return wa.reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, msg)
-				if (msg.message.extendedTextMessage != undefined) {
-					mentioned = msg.message.extendedTextMessage.contextInfo.mentionedJid
-					wa.hideTagKontak(from, mentioned[0].split('@')[0], argz[1])
+				if (!argz) return reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, chatUpdate)
+				if (chatUpdate.message.extendedTextMessage != undefined) {
+					mentioned = chatUpdate.message.extendedTextMessage.contextInfo.mentionedJid
+					hideTagKontak(from, mentioned[0].split('@')[0], argz[1])
 				} else {
-					wa.hideTagKontak(from, argz[0], argz[1])
+					hideTagKontak(from, argz[0], argz[1])
 				}
 				break
 			default:
 				if (chats.startsWith('> ')) {
-					console.log(color('[EVAL]'), color(moment(msg.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`Return brooo`))
-					return wa.reply(from, JSON.stringify(eval(chats.slice(2)), null, 2), msg)
+					console.log(color('[EVAL]'), color(moment(chatUpdate.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`Return brooo`))
+					return reply(from, JSON.stringify(eval(chats.slice(2)), null, 2), chatUpdate)
 				}
 				if (chats.startsWith('>> ')) {
-					console.log(color('[EVAL]'), color(moment(msg.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`Eval brooo`))
+					console.log(color('[EVAL]'), color(moment(chatUpdate.messageTimestamp * 1000).format('DD/MM/YY HH:mm:ss'), 'yellow'), color(`Eval brooo`))
 					eval(`(async () => { ${chats.slice(3)} })()`)
 				}
 				if (chats.startsWith('= ')) {
 					if (!arg) return
 					exec(arg, (err, stdout) => {
-						if (err) return wa.sendFakeStatus(from, err, fake)
-						if (stdout) wa.sendFakeStatus(from, stdout, fake)
+						if (err) return sendFakeStatus(from, err, fake)
+						if (stdout) sendFakeStatus(from, stdout, fake)
 					})
 				}
 				break

@@ -4,6 +4,7 @@
   "description": "Ga ada",
   "main": "index.js",
   "license": "ISC",
+  "type": "module",
   "directories": {
     "lib": "lib"
   },

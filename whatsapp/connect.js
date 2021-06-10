@@ -1,29 +1,32 @@
-const { WAConnection, MessageType } = require("@adiwajshing/baileys")
-const { color } = require('../lib/color')
-const qrcode = require("qrcode-terminal")
-const fs = require('fs')
-const figlet = require('figlet')
+import { WAConnection, MessageType } from '@adiwajshing/baileys'
+import { color } from '../lib/color.js'
+import qr from 'qrcode-terminal'
+const { generate } = qr
+import fs from 'fs'
+import figlet from 'figlet'
+const { textSync } = figlet
+const { existsSync, writeFileSync } = fs
 const client = new WAConnection()
 
-
-exports.client = client
-exports.connect = async() => {
+const _client = client
+export { _client as client }
+export async function connect() {
 	client.logger.level = 'info'
     let session = './session.json'
 	client.on('qr', qr => {
-        qrcode.generate(qr, { small: true })
+        generate(qr, { small: true })
         console.log(`Please Scan QR to authenticate!`)
     })
-	fs.existsSync(session) && client.loadAuthInfo(session)
+	existsSync(session) && client.loadAuthInfo(session)
 	client.on('connecting', () => {
 		console.log(color('Connecting...'))
 	})
 	client.on('open', () => {
-    console.log(color(figlet.textSync('  Self Bot Colongan', { width: 100, whitespaceBreak: true })))
+    console.log(color(textSync('  Self Bot Colongan', { width: 100, whitespaceBreak: true })))
     console.log(color('[DEV]'), color('Danang', 'yellow'))
     console.log(color('[~>>]'), color('BOT Started!', 'green'))
 	})
 	await client.connect({timeoutMs: 30*1000})
-    fs.writeFileSync(session, JSON.stringify(client.base64EncodedAuthInfo(), null, '\t'))
+    writeFileSync(session, JSON.stringify(client.base64EncodedAuthInfo(), null, '\t'))
     return client
 }
