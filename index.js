@@ -338,7 +338,7 @@ client.on('chat-update', async (chatUpdates) => {
 				let argz = arg.split('|')
 				if (!argz) return reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, m)
 				if (m.message.extendedTextMessage != undefined) {
-					mentioned = m.message.extendedTextMessage.contextInfo.mentionedJid
+					let mentioned = m.message.extendedTextMessage.contextInfo.mentionedJid
 					sendKontak(from, mentioned[0].split('@')[0], argz[1])
 				} else {
 					sendKontak(from, argz[0], argz[1])
@@ -373,8 +373,7 @@ client.on('chat-update', async (chatUpdates) => {
 			}
 			case 'fakethumbnail': case 'fthumbnail': case 'fakethumb': {
 				if ((isMedia && !m.message.videoMessage || isQuotedImage)) {
-					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(m).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : m
-					let media = await client.downloadMediaMessage(encmedia)
+					let media = isQuotedImage ? await client.downloadM(m) : await m.quoted.download()
 					sendFakeImg(from, media, arg, fakeimage, m)
 				} else {
 					reply(from, `Kirim gambar atau reply dengan caption ${prefix}fakethumb`, m)
@@ -402,8 +401,7 @@ client.on('chat-update', async (chatUpdates) => {
 			}
 			case 'imgtag': {
 				if ((isMedia && !m.message.videoMessage || isQuotedImage)) {
-					let encmedia = isQuotedImage ? JSON.parse(JSON.stringify(m).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : m
-					let media = await client.downloadMediaMessage(encmedia)
+					let media = isQuotedImage ? await client.downloadM(m) : await m.quoted.download()
 					hideTagImg(from, media)
 				} else {
 					reply(from, `Kirim gambar atau reply dengan caption ${prefix}imgtag caption`, m)
@@ -412,8 +410,7 @@ client.on('chat-update', async (chatUpdates) => {
 			}
 			case 'sticktag': case 'stickertag': {
 				if (!isQuotedSticker) return reply(from, `Reply sticker dengan caption *${prefix}stickertag*`, m)
-				let encmediai = JSON.parse(JSON.stringify(m).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo
-				let mediai = await client.downloadMediaMessage(encmediai)
+				let mediai = await m.quoted.download()
 				hideTagSticker(from, mediai)
 				break
 			}
@@ -421,7 +418,7 @@ client.on('chat-update', async (chatUpdates) => {
 				let argz = arg.split('|')
 				if (!argz) return reply(from, `Penggunaan ${prefix}kontak @tag atau nomor|nama`, m)
 				if (m.message.extendedTextMessage != undefined) {
-					mentioned = m.message.extendedTextMessage.contextInfo.mentionedJid
+					let mentioned = m.message.extendedTextMessage.contextInfo.mentionedJid
 					hideTagKontak(from, mentioned[0].split('@')[0], argz[1])
 				} else {
 					hideTagKontak(from, argz[0], argz[1])
