@@ -168,7 +168,7 @@ client.on('chat-update', async (chatUpdates) => {
 					const encmedia = isQuotedImage ? JSON.parse(JSON.stringify(m).replace('quotedM', 'm')).message.extendedTextMessage.contextInfo : m
 					const media = await client.downloadAndSaveMediaMessage(encmedia, `./sticker/${sender}`)
 					ffmpeg(`${media}`)
-						.input(media)
+						.videoFilters('transpose=1')
 						.on('start', function (cmd) {
 							console.log(`Started : ${cmd}`)
 						})
